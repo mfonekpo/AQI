@@ -3,6 +3,9 @@ import json
 from dotenv import load_dotenv
 import os
 from utils.logging_conf import logger
+from utils.supabase_conf import create_s3_client
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 
 load_dotenv()
@@ -22,6 +25,8 @@ payload = {
 url = "http://api.openweathermap.org/data/2.5/air_pollution"
 
 def get_air_pollution_data():
+
+    aqi_readings = []
     try:
         response = requests.get(
         url,
@@ -38,8 +43,6 @@ def get_air_pollution_data():
         logger.error("Failed to decode JSON response")
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP error occurred: {e}")
-    except response.status_code != 200:
-        logger.error(f"Request failed with status code: {response.status_code}")
     else:
         logger.info("Request was successful")
 
@@ -55,14 +58,24 @@ def get_air_pollution_data():
             "ozone_value": ozone_value
         }
 
-        return json_data
+        aqi_readings.append(json_data)
+        return aqi_readings
 
 
 def ingest_to_bucket():
     data = get_air_pollution_data()
+    s3_client = create_s3_client()
+    bucket_name = "lake"
+    time_part = datetime.now(
+        ZoneInfo("Africa/Lagos")
+    ).strftime("%Y-%m-%d_%I-%p")
     if data:
-        with open("air_pollution_data.json", "w") as json_file:
-            json.dump(data, json_file)
+        json_bytes = json.dumps(data, indent=4)
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=f"raw_data/aqi_{time_part}.json",
+            Body=json_bytes
+        )
         logger.info("Data ingested to bucket successfully")
     else:
         logger.error("Failed to ingest data to bucket")
