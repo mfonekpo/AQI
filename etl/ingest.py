@@ -26,6 +26,7 @@ if not all([WEATHERAPI, LAT, LONG]):
 
 url = "http://api.openweathermap.org/data/2.5/air_pollution"
 
+# Data validation
 class AirqualityFetchError(Exception):
     pass
 
@@ -100,7 +101,7 @@ def ingest_to_bucket():
         return
     
     s3_client = create_s3_client()
-    bucket_name = "raw"
+    bucket_name = "aqi.staging.raw"
     now = datetime.now(ZoneInfo("Africa/Lagos"))
     time_part = now.strftime("%Y%m%d_%H")
     key=f"raw_data/year={now.year}/month={now.month:02}/day={now.day:02}/hour={now.hour:02}/aqi.json"

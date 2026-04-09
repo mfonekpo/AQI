@@ -8,9 +8,8 @@ load_dotenv()
 
 def create_s3_client():
     try:
-        access_key = os.getenv("access_key_id")
+        access_key = os.getenv("access_key")
         secret_key = os.getenv("secret_access_key")
-        endpoint_url = os.getenv("endpoint_url")
         region = os.getenv("region")
 
         session = boto3.session.Session()
@@ -18,7 +17,6 @@ def create_s3_client():
             service_name="s3",
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
-            endpoint_url=endpoint_url,
             region_name=region
         )
         logger.info("S3 client created successfully")
