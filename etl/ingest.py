@@ -26,9 +26,11 @@ if not all([WEATHERAPI, LAT, LONG]):
 
 url = "http://api.openweathermap.org/data/2.5/air_pollution"
 
+
 # Data validation
 class AirqualityFetchError(Exception):
     pass
+
 
 class AirQualityReading(BaseModel):
     aqi: int
@@ -42,20 +44,13 @@ class AirQualityReading(BaseModel):
             raise ValueError(f"AQI value {v} is outside expected range 1-5")
         return v
 
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def get_air_pollution_data():
-    payload = {
-    "lat": LAT,
-    "lon": LONG,
-    "appid": WEATHERAPI
-}
+    payload = {"lat": LAT, "lon": LONG, "appid": WEATHERAPI}
 
     try:
-        response = requests.get(
-        url,
-        params=payload,
-        timeout=(30, 30)
-        )
+        response = requests.get(url, params=payload, timeout=(30, 30))
         response.raise_for_status()
         resp_dict = response.json().get("list", [])[0]
 
@@ -81,10 +76,7 @@ def get_air_pollution_data():
 
         try:
             reading = AirQualityReading(
-                aqi=aqi,
-                date=date,
-                co_value=co_value,
-                ozone_value=ozone_value
+                aqi=aqi, date=date, co_value=co_value, ozone_value=ozone_value
             )
         except ValidationError as e:
             logger.error(f"data validation failed: {e}")
@@ -99,22 +91,23 @@ def ingest_to_bucket():
     except AirqualityFetchError as e:
         logger.error(f"Failed to ingest data to bucket: {e}")
         return
-    
+
     s3_client = create_s3_client()
     bucket_name = "aqi.staging.raw"
     now = datetime.now(ZoneInfo("Africa/Lagos"))
     time_part = now.strftime("%Y%m%d_%H")
-    key=f"raw_data/year={now.year}/month={now.month:02}/day={now.day:02}/hour={now.hour:02}/aqi.json"
-    json_bytes = json.dumps(data, indent=4).encode('utf-8')
+    key = f"raw_data/year={now.year}/month={now.month:02}/day={now.day:02}/hour={now.hour:02}/aqi.json"
+    json_bytes = json.dumps(data, indent=4).encode("utf-8")
     try:
         s3_client.put_object(
             Bucket=bucket_name,
-            Key = key,
+            Key=key,
             Body=json_bytes,
         )
         logger.info(f"data saved at {time_part} to {key}")
     except Exception as e:
         logger.error(f"Failed to ingest data to bucket: {e}")
+
 
 if __name__ == "__main__":
     ingest_to_bucket()
