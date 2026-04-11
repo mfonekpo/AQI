@@ -1,0 +1,16 @@
+# This is a workflow to build, test and deploy Airflow on Github Actions
+# This workflow will sync to my AWS MWAA environment and deploy the latest changes to the environment
+
+name: Airflow Workflow
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+            - main
+            - develop
+    workflow_dispatch:
+           
