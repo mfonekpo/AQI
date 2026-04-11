@@ -30,4 +30,4 @@ jobs:
 
             - name: Run tests
               run: |
-                ruff check *.py
+                ruff check .
