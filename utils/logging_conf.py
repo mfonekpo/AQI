@@ -11,7 +11,7 @@ MONITORING_LOG_FILE = LOG_DIR / "monitoring.log"
 logger = logging.getLogger("__name__")
 logger.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
 if not logger.handlers:
     # Console

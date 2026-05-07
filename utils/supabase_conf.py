@@ -17,7 +17,7 @@ def create_s3_client():
             service_name="s3",
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
-            region_name=region
+            region_name=region,
         )
         logger.info("S3 client created successfully")
         return s3_client
