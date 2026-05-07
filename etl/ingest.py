@@ -8,6 +8,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from tenacity import retry, stop_after_attempt, wait_exponential
 from pydantic import BaseModel, field_validator, ValidationError
+from alerting.alert import send_telegram_alert
 
 
 load_dotenv()
@@ -17,11 +18,13 @@ WEATHERAPI = os.getenv("WEATHERAPI")
 LAT = os.getenv("LAT")
 LONG = os.getenv("LONG")
 
-if not all([WEATHERAPI, LAT, LONG]):
-    raise EnvironmentError(
-        "Missing required environment variables. Please check the .env file."
-        "WEATHERAPI, LAT, LONG must all be set"
-    )
+
+def validate_env():
+    if not all([WEATHERAPI, LAT, LONG]):
+        raise EnvironmentError(
+            "Missing required environment variables. Please check the .env file."
+            "WEATHERAPI, LAT, LONG must all be set"
+        )
 
 
 url = "http://api.openweathermap.org/data/2.5/air_pollution"
@@ -41,6 +44,7 @@ class AirQualityReading(BaseModel):
     @field_validator("aqi")
     def aqi_must_be_in_range(cls, v):
         if not 1 <= v <= 5:
+            send_telegram_alert(f"AQI value {v} is outside expected range 1-5")
             raise ValueError(f"AQI value {v} is outside expected range 1-5")
         return v
 
@@ -56,15 +60,20 @@ def get_air_pollution_data():
 
     except requests.exceptions.Timeout:
         logger.error("The request timed out")
+        send_telegram_alert("The request timed out")
         raise AirqualityFetchError("The request timed out")
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP error occurred: {e}")
+        send_telegram_alert(f"HTTP error occurred: {e}")
         raise AirqualityFetchError(f"HTTP error: {e}")
     except requests.exceptions.RequestException as e:
         logger.error(f"An error occurred: {e}")
+        send_telegram_alert(f"An error occurred: {e}")
+
         raise AirqualityFetchError(f"Request failed: {e}")
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON response")
+        send_telegram_alert("Failed to decode JSON response")
         raise AirqualityFetchError("Failed to decode JSON response")
     else:
         logger.info("Request was successful")
@@ -80,16 +89,20 @@ def get_air_pollution_data():
             )
         except ValidationError as e:
             logger.error(f"data validation failed: {e}")
+            send_telegram_alert(f"Data Validation failed: {e}")
             raise AirqualityFetchError(f"Data Validation failed: {e}")
 
         return reading.model_dump()
 
 
 def ingest_to_bucket():
+    validate_env()
+    
     try:
         data = get_air_pollution_data()
     except AirqualityFetchError as e:
         logger.error(f"Failed to ingest data to bucket: {e}")
+        send_telegram_alert(f"Failed to ingest data to bucket: {e}")
         return
 
     s3_client = create_s3_client()
@@ -105,8 +118,10 @@ def ingest_to_bucket():
             Body=json_bytes,
         )
         logger.info(f"data saved at {time_part} to {key}")
+        send_telegram_alert(f"Data successfully ingested to bucket: {key}")
     except Exception as e:
         logger.error(f"Failed to ingest data to bucket: {e}")
+        send_telegram_alert(f"Failed to ingest data to bucket: {e}")
 
 
 if __name__ == "__main__":
