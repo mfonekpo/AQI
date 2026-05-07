@@ -37,6 +37,10 @@ jobs:
               run: |
                 ruff check .
 
+            - name: code formatting
+              run: |
+                ruff format .
+
             - name: check formatting
               run: |
                 ruff format --check .
