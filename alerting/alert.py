@@ -17,6 +17,6 @@ def send_telegram_alert(message: str):
         "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
         "text": message
     }
-    response = requests.post(url, data=data)
+    response = requests.post(url, data=data, timeout=(30, 30))
     if response.status_code != 200:
         raise RuntimeError(f"Failed to send Telegram alert: {response.text}")
