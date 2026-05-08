@@ -1,0 +1,58 @@
+name: Main Workflow
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+            - main
+            - develop
+    workflow_dispatch:
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: setup python
+              uses: actions/setup-python@v6
+              with:
+                python-version: '3.12'
+
+            - uses: actions/cache@v5
+              with:
+                path: ~/.cache/pip
+                key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+            
+            - name: Install dependencies
+              run: |
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+
+            - name: Run tests
+              run: |
+                ruff check .
+
+            - name: code formatting
+              run: |
+                ruff format .
+
+            - name: check formatting
+              run: |
+                ruff format --check .
+
+            - name: Type check
+              run: |
+                mypy .
+
+            - name: Security scan
+              run: |
+                bandit -r .
+
+            - name: dependency audit
+              run: |
+                pip-audit
