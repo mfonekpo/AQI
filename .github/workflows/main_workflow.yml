@@ -55,4 +55,4 @@ jobs:
 
             - name: dependency audit
               run: |
-                pip-autit
+                pip-audit
