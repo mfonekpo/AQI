@@ -33,8 +33,10 @@ if not logger.handlers:
     logger.addHandler(monitoring_file_handler)
 
 # Attach logging level constants to the logger object for convenience
+
+# type: ignore[attr-defined]
 logger.DEBUG = logging.DEBUG
-logger.INFO = logging.INFO
+logger.INFO = logging.INFO   
 logger.WARNING = logging.WARNING
 logger.ERROR = logging.ERROR
 logger.CRITICAL = logging.CRITICAL
