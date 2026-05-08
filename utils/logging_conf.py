@@ -34,11 +34,10 @@ if not logger.handlers:
 
 # Attach logging level constants to the logger object for convenience
 
-# type: ignore[attr-defined]
-logger.DEBUG = logging.DEBUG
-logger.INFO = logging.INFO   
-logger.WARNING = logging.WARNING
-logger.ERROR = logging.ERROR
-logger.CRITICAL = logging.CRITICAL
+logger.DEBUG = logging.DEBUG             # type: ignore[attr-defined]
+logger.INFO = logging.INFO               # type: ignore[attr-defined]
+logger.WARNING = logging.WARNING         # type: ignore[attr-defined]
+logger.ERROR = logging.ERROR             # type: ignore[attr-defined]
+logger.CRITICAL = logging.CRITICAL       # type: ignore[attr-defined]
 
 __all__ = ["logger"]
