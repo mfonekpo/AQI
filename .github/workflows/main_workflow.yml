@@ -11,7 +11,7 @@ on:
             - develop
     workflow_dispatch:
 jobs:
-    quality:
+    code-quality-checks:
         runs-on: ubuntu-latest
 
         steps:
@@ -33,11 +33,11 @@ jobs:
                 python -m pip install --upgrade pip
                 pip install -r requirements.txt
 
-            - name: Run tests
+            - name: Ruff linting
               run: |
                 ruff check .
 
-            - name: code formatting
+            - name: Ruff formatting
               run: |
                 ruff format .
 
