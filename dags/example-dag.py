@@ -4,8 +4,8 @@ from etl.ingest import ingest_to_bucket
 import pendulum
 
 
-@task(retries=3)
-def ingestion():
+@task()
+def ingestion():    
     ingest_to_bucket()
 
 
