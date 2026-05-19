@@ -10,13 +10,3 @@ output "bucket_arns" {
     key => bucket.arn
   }
 }
-
-output "terraform_role_arn" {
-  value       = aws_iam_role.terraform_role.arn
-  description = "ARN of the Terraform provisioner role"
-}
-
-output "data_pipeline_role_arn" {
-  value       = aws_iam_role.data_pipeline_role.arn
-  description = "ARN of the data pipeline role"
-}
