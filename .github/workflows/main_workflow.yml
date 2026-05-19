@@ -56,3 +56,4 @@ jobs:
             - name: dependency audit
               run: |
                 pip-audit
+                pip-audit --fix
