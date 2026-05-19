@@ -1,0 +1,19 @@
+variable "aws_region" {
+  description = "The AWS region to deploy resources in."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "s3_buckets" {
+    description = "Map of S3 buckets to create"
+    type        = map(object({
+        name = string
+        environment = string  
+    }))
+}
+
+variable "environment" {
+    description = "The environment to deploy resources in."
+    type        = string
+    default     = "dev"
+}

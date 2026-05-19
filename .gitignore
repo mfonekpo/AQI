@@ -106,3 +106,6 @@ __pypackages__/
 docker-compose.override.yml
 .dockerignore
 
+
+#terraform
+.terraform/
