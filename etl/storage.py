@@ -28,7 +28,7 @@ def write_to_bucket(data: dict) -> None:
     Receives already-validated data as a plain dict.
     """
 
-    bucket_name = "aqi.staging.raw"
+    bucket_name = "aqi-staging"
 
     s3_client = create_s3_client()
     now = datetime.now(ZoneInfo("Africa/Lagos"))
