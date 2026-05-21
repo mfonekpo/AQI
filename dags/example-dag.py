@@ -5,13 +5,12 @@ import pendulum
 
 
 @task()
-def ingestion():    
+def ingestion():
     ingest_to_bucket()
 
 
 @dag(
     schedule="@hourly",
-    # schedule="* * * * *",
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
     catchup=False,
     is_paused_upon_creation=False,
