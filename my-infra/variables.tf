@@ -5,15 +5,20 @@ variable "aws_region" {
 }
 
 variable "s3_buckets" {
-    description = "Map of S3 buckets to create"
-    type        = map(object({
-        name = string
-        environment = string  
-    }))
+  description = "Map of S3 buckets to create"
+  type = map(object({
+    name        = string
+    environment = string
+  }))
 }
 
 variable "environment" {
-    description = "The environment to deploy resources in."
-    type        = string
-    default     = "dev"
+  description = "The environment to deploy resources in."
+  type        = string
+  default     = "dev"
+}
+
+variable "queue_name" {
+  description = "The name of the SQS queue."
+  type        = string
 }
