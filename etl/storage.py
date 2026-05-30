@@ -42,8 +42,8 @@ def write_to_bucket(data: dict) -> None:
             Body=json_bytes,
         )
         logger.info(f"data saved at {now} to {key}")
-        send_telegram_alert(f"Data successfully ingested to bucket: {key}")
+        send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
     except Exception as e:
-        logger.error(f"Failed to ingest data to bucket: {e}")
-        send_telegram_alert(f"Failed to ingest data to bucket: {e}")
+        logger.error(f"Failed to ingest data to {bucket_name}: {e}")
+        send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")
         raise
