@@ -1,10 +1,9 @@
-from zoneinfo import ZoneInfo
-
 from alerting.alert import send_telegram_alert
 from utils.logging_conf import logger
 from airflow.sdk import get_current_context
 from urllib.parse import unquote
-from datetime import datetime
+from datetime import datetime, timezone
+from utils.time_utils import now_wat
 import json
 
 from utils.supabase_conf import create_s3_client
@@ -51,7 +50,7 @@ def convert_date_from_unix_to_datetime():
     key = get_loaded_file_key_from_bucket()
     data = get_data_from_bucket(key)
 
-    date_value = datetime.fromtimestamp(data["date"])
+    date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc)
 
     logger.info("Data transformation logic fired")
     send_telegram_alert("Data transformation logic fired")
@@ -74,7 +73,7 @@ def save_transformed_data_to_bucket():
 
     bucket_name = "aqi-transform"
     s3_client = create_s3_client()
-    now = datetime.now(ZoneInfo("Africa/Lagos"))
+    now = datetime.now(timezone.utc)
     key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.json"
 
     try:
@@ -84,7 +83,9 @@ def save_transformed_data_to_bucket():
             Body=json.dumps(transformed_data),
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
+        logger.info(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
         send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
+        send_telegram_alert(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
     except Exception as e:
         logger.error(f"Failed to ingest data to {bucket_name}: {e}")
         send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")

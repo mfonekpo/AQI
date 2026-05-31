@@ -1,6 +1,5 @@
 import json
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 from utils.logging_conf import logger
 from utils.supabase_conf import create_s3_client
 from alerting.alert import send_telegram_alert
@@ -31,7 +30,7 @@ def write_to_bucket(data: dict) -> None:
     bucket_name = "aqi-staging"
 
     s3_client = create_s3_client()
-    now = datetime.now(ZoneInfo("Africa/Lagos"))
+    now = datetime.now(timezone.utc)
     key = build_s3_key(now)
     json_bytes = json.dumps(data, indent=4).encode("utf-8")
 
