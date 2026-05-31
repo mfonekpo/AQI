@@ -1,10 +1,9 @@
 from airflow.sdk import dag, task
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.task.trigger_rule import TriggerRule
 from etl.ingest import ingest_to_bucket
-from etl.sensors import sensor_decorator, log_file_detected
+from etl.sensors import ingestion_sensor_decorator, transformation_sensor_decorator, log_file_detected
 from etl.transform import save_transformed_data_to_bucket
 import pendulum
-
 
 
 @task()
@@ -12,13 +11,22 @@ def ingestion():
     ingest_to_bucket()
 
 
-# Call the sensor at DAG level
-wait_for_new_data = sensor_decorator()
+# Call the ingestion sensor at DAG level
+wait_for_new_data = ingestion_sensor_decorator()
+
+# Call the transformation sensor at DAG level
+wait_for_transformed_data = transformation_sensor_decorator()
 
 
+# Sensor logging for staging
 @task(trigger_rule=TriggerRule.ALL_DONE)
 def log_sensor_success():
-    log_file_detected()
+    log_file_detected(task_id="watch_data_staging")
+
+# Sensor logging for transformation
+@task(trigger_rule=TriggerRule.ALL_DONE)
+def log_transformation_success():
+    log_file_detected(task_id="watch_data_transformation")
 
 
 @task()
@@ -36,15 +44,18 @@ def transformation():
 
 def taskflow():
     ingest    = ingestion()
-    sensor    = wait_for_new_data
+    ingestion_sensor    = wait_for_new_data
+    transformation_sensor = wait_for_transformed_data
     transform = transformation()
-    log       = log_sensor_success()
+    sensor_log_staging       = log_sensor_success()
+    sensor_log_transform = log_transformation_success()
 
     # ✅ Critical path — logging is completely removed
-    ingest >> sensor >> transform
+    ingest >> ingestion_sensor >> transform >> transformation_sensor
 
     # ✅ Logging runs in parallel after sensor — doesn't block transformation
-    sensor >> log
+    ingestion_sensor >> sensor_log_staging
+    transformation_sensor >> sensor_log_transform
 
 # Instantiate the DAG
 taskflow()
