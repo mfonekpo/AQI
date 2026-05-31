@@ -17,19 +17,23 @@ def ingest_to_bucket():
 
     try:
         raw_data = fetch_air_quality()
-        logger.info("Data fetched successfully")
-        send_telegram_alert("Data fetched successfully")
+        logger.info("Data fetched from weather API successfully")
+        send_telegram_alert("Data fetched from weather API successfully")
     except AirqualityFetchError as e:
         logger.error(f"Failed to fetch air quality data: {e}")
         send_telegram_alert(f"Failed to fetch air quality data: {e}")
         return
     try:
         write_to_bucket(raw_data)
-        logger.info("Data saved to bucket successfully")
-        send_telegram_alert("Data saved to bucket successfully")
+        logger.info("Data saved to staging bucket successfully")
+        send_telegram_alert("Data saved to staging bucket successfully")
     except Exception as e:
-        logger.error(f"Failed to save data to bucket: {e}")
-        send_telegram_alert(f"Failed to save data to bucket: {e}")
+        logger.error(f"Failed to save data to staging bucket: {e}")
+        send_telegram_alert(f"Failed to save data to staging bucket: {e}")
+        raise
+    except ConnectionError as e:
+        logger.error(f"Connection error while saving data to staging bucket: {e}")
+        send_telegram_alert(f"Connection error while saving data to staging bucket: {e}")
         raise
 
 if __name__ == "__main__":

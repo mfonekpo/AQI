@@ -1,6 +1,5 @@
 import json
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 from utils.logging_conf import logger
 from utils.supabase_conf import create_s3_client
 from alerting.alert import send_telegram_alert
@@ -28,10 +27,10 @@ def write_to_bucket(data: dict) -> None:
     Receives already-validated data as a plain dict.
     """
 
-    bucket_name = "aqi.staging.raw"
+    bucket_name = "aqi-staging"
 
     s3_client = create_s3_client()
-    now = datetime.now(ZoneInfo("Africa/Lagos"))
+    now = datetime.now(timezone.utc)
     key = build_s3_key(now)
     json_bytes = json.dumps(data, indent=4).encode("utf-8")
 
@@ -42,8 +41,8 @@ def write_to_bucket(data: dict) -> None:
             Body=json_bytes,
         )
         logger.info(f"data saved at {now} to {key}")
-        send_telegram_alert(f"Data successfully ingested to bucket: {key}")
+        send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
     except Exception as e:
-        logger.error(f"Failed to ingest data to bucket: {e}")
-        send_telegram_alert(f"Failed to ingest data to bucket: {e}")
+        logger.error(f"Failed to ingest data to {bucket_name}: {e}")
+        send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")
         raise
