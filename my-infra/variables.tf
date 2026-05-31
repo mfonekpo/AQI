@@ -22,3 +22,8 @@ variable "queue_name" {
   description = "The name of the SQS queue."
   type        = string
 }
+
+variable "transform_queue_name" {
+  description = "SQS Queue for transformation"
+  type        = string
+}

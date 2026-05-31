@@ -2,6 +2,7 @@ resource "aws_s3_bucket" "buckets" {
   for_each = var.s3_buckets
 
   bucket = each.value.name
+  force_destroy = true
 
   tags = {
     Name        = each.value.name
