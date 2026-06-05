@@ -1,18 +1,19 @@
-from alerting.alert import send_telegram_alert
-from utils.logging_conf import logger
-from airflow.sdk import get_current_context
-from urllib.parse import unquote
-from datetime import datetime, timezone
-from utils.time_utils import now_wat
-import json
-
 from utils.supabase_conf import create_s3_client
+from alerting.alert import send_telegram_alert
+from airflow.sdk import get_current_context
+from datetime import datetime, timezone
+from utils.logging_conf import logger
+from utils.time_utils import now_wat
+from urllib.parse import unquote
+import pandas as pd
+import io
+import json
 
 
 def get_loaded_file_key_from_bucket():
     context = get_current_context()
     messages = context["ti"].xcom_pull(
-        task_ids="watch_data_staging",
+        task_ids="ingestion_SQS_sensor",
         key="messages"
     )
 
@@ -57,10 +58,24 @@ def convert_date_from_unix_to_datetime():
 
     return {
         "aqi": data["aqi"],
-        "date": date_value.strftime("%Y-%m-%d %H:%M:%S"),
+        "date_epoch": data["date"],
+        "date_utc": date_value,
         "co_value": data["co_value"],
         "ozone_value": data["ozone_value"]
     }
+
+def convert_to_parquet():
+    """
+    Example of a more complex transformation function that converts the data to Parquet format.
+    """
+
+    transformed_data = convert_date_from_unix_to_datetime()
+    df = pd.DataFrame([transformed_data])
+
+    parquet_buffer = io.BytesIO()
+    df.to_parquet(parquet_buffer, index=False)
+
+    return parquet_buffer.getvalue()
 
 
 def save_transformed_data_to_bucket():
@@ -69,18 +84,19 @@ def save_transformed_data_to_bucket():
     and storage layers. Has zero knowledge of the inner workings of either layer.
     """
 
-    transformed_data = convert_date_from_unix_to_datetime()
+    # transformed_data = convert_date_from_unix_to_datetime()
+    transformed_data = convert_to_parquet()
 
     bucket_name = "aqi-transform"
     s3_client = create_s3_client()
     now = datetime.now(timezone.utc)
-    key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.json"
+    key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.parquet"
 
     try:
         s3_client.put_object(
             Bucket=bucket_name,
             Key=key,
-            Body=json.dumps(transformed_data),
+            Body=transformed_data,
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
         logger.info(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
