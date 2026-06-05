@@ -128,7 +128,7 @@ resource "aws_s3_bucket_notification" "transform_notification" {
     queue_arn     = aws_sqs_queue.transform_queue.arn
     events        = ["s3:ObjectCreated:*"]
     filter_prefix = "transformed_data/"
-    filter_suffix = ".json"
+    filter_suffix = ".parquet"
   }
   depends_on = [aws_sqs_queue_policy.transform_queue_policy]
 }
