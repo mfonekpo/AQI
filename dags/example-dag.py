@@ -1,8 +1,9 @@
 from airflow.sdk import dag, task
 from airflow.task.trigger_rule import TriggerRule
 from etl.ingest import ingest_to_bucket
-from etl.sensors import ingestion_sensor_decorator, transformation_sensor_decorator, log_file_detected
+from etl.sensors import ingestion_sensor_decorator, transformation_sensor_decorator
 from etl.transform import save_transformed_data_to_bucket
+from alerting.sensor_logging import log_file_detected
 import pendulum
 
 
@@ -19,14 +20,15 @@ wait_for_transformed_data = transformation_sensor_decorator()
 
 
 # Sensor logging for staging
-@task(trigger_rule=TriggerRule.ALL_DONE)
+@task(trigger_rule=TriggerRule.ALL_SUCCESS)
 def log_sensor_success():
-    log_file_detected(task_id="watch_data_staging")
+    log_file_detected(task_id="ingestion_SQS_sensor")
+
 
 # Sensor logging for transformation
-@task(trigger_rule=TriggerRule.ALL_DONE)
+@task(trigger_rule=TriggerRule.ALL_SUCCESS)
 def log_transformation_success():
-    log_file_detected(task_id="watch_data_transformation")
+    log_file_detected(task_id="transformation_SQS_sensor")
 
 
 @task()
@@ -35,8 +37,9 @@ def transformation():
 
 
 @dag(
+    dag_id="aqi_data_pipeline",
     schedule="@hourly",
-    start_date=pendulum.datetime(2026, 1, 1, tz="Africa/Lagos"),
+    start_date=pendulum.datetime(2026, 5, 28, tz="UTC"),
     catchup=False,
     is_paused_upon_creation=False,
     max_active_runs=3,
