@@ -2,6 +2,7 @@ from utils.supabase_conf import create_s3_client
 from alerting.alert import send_telegram_alert
 from airflow.sdk import get_current_context
 from datetime import datetime, timezone
+from etl.validate import AirQualityTransformedReading
 from utils.logging_conf import logger
 from utils.time_utils import now_wat
 from urllib.parse import unquote
@@ -74,6 +75,13 @@ def convert_to_parquet():
 
     parquet_buffer = io.BytesIO()
     df.to_parquet(parquet_buffer, index=False)
+
+    try:
+        AirQualityTransformedReading(**transformed_data)
+    except Exception as e:
+        logger.error(f"Data validation failed after transformation: {e}")
+        send_telegram_alert(f"Data validation failed after transformation: {e}")
+        raise
 
     return parquet_buffer.getvalue()
 
