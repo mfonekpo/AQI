@@ -1,11 +1,23 @@
 from airflow.sdk import dag, task
 from airflow.task.trigger_rule import TriggerRule
+from alerting.alert import send_telegram_alert
 from etl.ingest import ingest_to_bucket
 from etl.sensors import ingestion_sensor_decorator, transformation_sensor_decorator
 from etl.transform import save_transformed_data_to_bucket
 from alerting.sensor_logging import log_file_detected
 import pendulum
 
+
+def on_failure_callback(context: dict) -> None:
+    dag_id  = context["dag"].dag_id
+    task_id = context["task_instance"].task_id
+    run_id  = context["run_id"]
+    send_telegram_alert(
+        f"❌ Pipeline failed!\n"
+        f"DAG:  {dag_id}\n"
+        f"Task: {task_id}\n"
+        f"Run:  {run_id}"
+    )
 
 @task()
 def ingestion():
@@ -43,6 +55,7 @@ def transformation():
     catchup=False,
     is_paused_upon_creation=False,
     max_active_runs=3,
+    on_failure_callback=on_failure_callback
 )
 
 def taskflow():
