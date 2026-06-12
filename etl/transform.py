@@ -1,27 +1,12 @@
 from utils.supabase_conf import create_s3_client
 from alerting.alert import send_telegram_alert
-from airflow.sdk import get_current_context
 from datetime import datetime, timezone
 from etl.validate import AirQualityTransformedReading
 from utils.logging_conf import logger
 from utils.time_utils import now_wat
-from urllib.parse import unquote
 import pandas as pd
 import io
 import json
-
-
-def get_loaded_file_key_from_bucket():
-    context = get_current_context()
-    messages = context["ti"].xcom_pull(
-        task_ids="ingestion_SQS_sensor",
-        key="messages"
-    )
-
-    message_body = json.loads(messages[0]["Body"])
-    message_key = unquote((message_body.get("Records")[0].get("s3").get("object").get("key")))
-
-    return message_key
 
 
 def get_data_from_bucket(key: str) -> dict:
@@ -42,14 +27,13 @@ def get_data_from_bucket(key: str) -> dict:
         raise
 
 
-def convert_date_from_unix_to_datetime():
+def convert_date_from_unix_to_datetime(key: str) -> dict:
     """
     Transformation layer — only responsibility is transforming the data.
     Has zero knowledge of HTTP, validation, or storage.
     Receives already-validated data as a plain dict and returns a transformed dict.
     """
 
-    key = get_loaded_file_key_from_bucket()
     data = get_data_from_bucket(key)
 
     date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc)
@@ -65,12 +49,12 @@ def convert_date_from_unix_to_datetime():
         "ozone_value": data["ozone_value"]
     }
 
-def convert_to_parquet():
+def convert_to_parquet(key: str):
     """
     Example of a more complex transformation function that converts the data to Parquet format.
     """
 
-    transformed_data = convert_date_from_unix_to_datetime()
+    transformed_data = convert_date_from_unix_to_datetime(key)
     df = pd.DataFrame([transformed_data])
 
     parquet_buffer = io.BytesIO()
@@ -86,14 +70,14 @@ def convert_to_parquet():
     return parquet_buffer.getvalue()
 
 
-def save_transformed_data_to_bucket():
+def save_transformed_data_to_bucket(key: str):
     """
     Orchestration layer — only responsibility is orchestrating the transformation
     and storage layers. Has zero knowledge of the inner workings of either layer.
     """
 
     # transformed_data = convert_date_from_unix_to_datetime()
-    transformed_data = convert_to_parquet()
+    transformed_data = convert_to_parquet(key)
 
     bucket_name = "aqi-transform"
     s3_client = create_s3_client()
@@ -107,9 +91,9 @@ def save_transformed_data_to_bucket():
             Body=transformed_data,
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
-        logger.info(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
+        logger.info(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
         send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
-        send_telegram_alert(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
+        send_telegram_alert(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     except Exception as e:
         logger.error(f"Failed to ingest data to {bucket_name}: {e}")
         send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")
