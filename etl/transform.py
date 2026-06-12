@@ -5,6 +5,7 @@ from etl.validate import AirQualityTransformedReading
 from utils.logging_conf import logger
 from utils.time_utils import now_wat
 import pandas as pd
+from etl.validate import AirQualityReading
 import io
 import json
 
@@ -20,7 +21,10 @@ def get_data_from_bucket(key: str) -> dict:
     try:
         response = s3_client.get_object(Bucket=bucket_name, Key=key)
         data = response["Body"].read().decode("utf-8")
-        return json.loads(data)
+
+        parsed_data = json.loads(data)
+        validated_data = AirQualityReading(**parsed_data) # Validate the data before returning
+        return validated_data.model_dump() # return dict instead of pydantic model val
     except Exception as e:
         logger.error(f"Failed to fetch data from bucket: {e}")
         send_telegram_alert(f"Failed to fetch data from bucket: {e}")
@@ -49,23 +53,23 @@ def convert_date_from_unix_to_datetime(key: str) -> dict:
         "ozone_value": data["ozone_value"]
     }
 
-def convert_to_parquet(key: str):
+def convert_to_parquet(key: str) -> bytes:
     """
     Example of a more complex transformation function that converts the data to Parquet format.
     """
 
-    transformed_data = convert_date_from_unix_to_datetime(key)
-    df = pd.DataFrame([transformed_data])
-
-    parquet_buffer = io.BytesIO()
-    df.to_parquet(parquet_buffer, index=False)
-
     try:
+        transformed_data = convert_date_from_unix_to_datetime(key)
         AirQualityTransformedReading(**transformed_data)
     except Exception as e:
         logger.error(f"Data validation failed after transformation: {e}")
         send_telegram_alert(f"Data validation failed after transformation: {e}")
         raise
+
+    df = pd.DataFrame([transformed_data])
+
+    parquet_buffer = io.BytesIO()
+    df.to_parquet(parquet_buffer, index=False)
 
     return parquet_buffer.getvalue()
 
