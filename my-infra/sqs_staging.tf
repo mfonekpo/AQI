@@ -8,9 +8,10 @@ resource "aws_sqs_queue" "my_queue" {
   name                       = var.queue_name
   delay_seconds              = 0
   max_message_size           = 262144
-  message_retention_seconds  = 86400
+  message_retention_seconds  = 1209600 # 14 days
   receive_wait_time_seconds  = 10
-  visibility_timeout_seconds = 30
+  visibility_timeout_seconds = 120
+  sqs_managed_sse_enabled    = true
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.dlq.arn
@@ -116,6 +117,7 @@ data "aws_iam_policy_document" "s3_to_sqs" {
   }
 }
 
+# Attach S3 permission to SQS queue policy
 resource "aws_sqs_queue_policy" "s3_notification_policy" {
   queue_url = aws_sqs_queue.my_queue.id
   policy    = data.aws_iam_policy_document.s3_to_sqs.json
