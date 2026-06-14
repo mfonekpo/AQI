@@ -33,9 +33,9 @@ def ingestion():
     },
 )
 
-def taskflow():
+def producer_dag_run():
     ingestion()
 
 
 # Instantiate the DAG
-taskflow()
+producer_dag_run()
