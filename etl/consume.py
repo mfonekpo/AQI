@@ -1,9 +1,9 @@
-import boto3
 import json
 from urllib.parse import unquote
 from utils.logging_conf import logger
 from alerting.alert import send_telegram_alert
 import os
+from utils.aws_conf import create_sqs_client
 from dotenv import load_dotenv
 
 
@@ -30,7 +30,7 @@ def receive_sqs_message(queue_url: str | None = None) -> dict | None:
     or None if queue empty.
     """
 
-    sqs_client = boto3.client("sqs", region_name="us-east-1")
+    sqs_client = create_sqs_client()
     queue_url = queue_url or validate_queue_url(
         os.getenv("STAGING_QUEUE_URL")
     )
@@ -77,7 +77,7 @@ def delete_message(receipt_handle: str, queue_url: str | None = None) -> None:
     """
     Deletes a message from SQS using its receipt handle.
     """
-    sqs_client = boto3.client("sqs", region_name="us-east-1")
+    sqs_client = create_sqs_client()
     queue_url = queue_url or validate_queue_url(
         os.getenv("STAGING_QUEUE_URL")
     )
