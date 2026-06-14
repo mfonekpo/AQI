@@ -1,4 +1,4 @@
-from airflow.sdk import dag, task
+from airflow.sdk import dag, task, Context
 from alerting.alert import send_telegram_alert
 from etl.consume import receive_sqs_message, delete_message
 from utils.logging_conf import logger
@@ -7,7 +7,7 @@ from etl.sensors import ingestion_sensor_decorator
 from etl.transform import save_transformed_data_to_bucket
 
 
-def on_failure_callback(context: dict) -> None:
+def on_failure_callback(context: Context) -> None:
     dag_id  = context["dag"].dag_id
     task_id = context["task_instance"].task_id
     run_id  = context["run_id"]

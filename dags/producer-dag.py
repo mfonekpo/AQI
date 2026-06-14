@@ -1,10 +1,10 @@
-from airflow.sdk import dag, task
+from airflow.sdk import dag, task, Context
 from alerting.alert import send_telegram_alert
 from etl.ingest import ingest_to_bucket
 import pendulum
 
 
-def on_failure_callback(context: dict) -> None:
+def on_failure_callback(context: Context) -> None:
     dag_id  = context["dag"].dag_id
     task_id = context["task_instance"].task_id
     run_id  = context["run_id"]
