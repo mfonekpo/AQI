@@ -1,4 +1,4 @@
-from utils.supabase_conf import create_s3_client
+from utils.aws_conf import create_s3_client
 from alerting.alert import send_telegram_alert
 from datetime import datetime, timezone
 from etl.validate import AirQualityTransformedReading
