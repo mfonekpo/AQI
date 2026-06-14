@@ -27,3 +27,43 @@ variable "transform_queue_name" {
   description = "SQS Queue for transformation"
   type        = string
 }
+
+# Snowflake variables
+variable "snowflake_organization_name" {
+  description = "Snowflake organization name"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "snowflake_account_name" {
+  description = "Snowflake account name"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "snowflake_user" {
+  description = "Snowflake user name"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "snowflake_role" {
+  description = "Snowflake role name"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+
+variable "schema_name" {
+  description = "Snowflake schema name"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Snowflake database name"
+  type        = string
+}
