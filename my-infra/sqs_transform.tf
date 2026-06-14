@@ -6,7 +6,7 @@ resource "aws_sqs_queue" "transform_queue" {
   name                       = var.transform_queue_name
   delay_seconds              = 0
   max_message_size           = 262144
-  message_retention_seconds  = 86400
+  message_retention_seconds  = 86400 # 24 hours
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 30
 
