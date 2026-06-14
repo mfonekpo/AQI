@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 from utils.logging_conf import logger
-from utils.supabase_conf import create_s3_client
+from utils.aws_conf import create_s3_client
 from alerting.alert import send_telegram_alert
 
 
@@ -18,7 +18,6 @@ def build_s3_key(now: datetime) -> str:
         f"hour={now.hour:02}/"
         f"aqi.json"
     )
-
 
 def write_to_bucket(data: dict) -> None:
     """
