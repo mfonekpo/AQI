@@ -6,7 +6,7 @@ resource "aws_sqs_queue" "transform_queue" {
   name                       = var.transform_queue_name
   delay_seconds              = 0
   max_message_size           = 262144
-  message_retention_seconds  = 86400
+  message_retention_seconds  = 86400 # 24 hours
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 30
 
@@ -128,7 +128,7 @@ resource "aws_s3_bucket_notification" "transform_notification" {
     queue_arn     = aws_sqs_queue.transform_queue.arn
     events        = ["s3:ObjectCreated:*"]
     filter_prefix = "transformed_data/"
-    filter_suffix = ".json"
+    filter_suffix = ".parquet"
   }
   depends_on = [aws_sqs_queue_policy.transform_queue_policy]
 }

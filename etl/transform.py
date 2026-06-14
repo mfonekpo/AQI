@@ -1,25 +1,13 @@
+from utils.aws_conf import create_s3_client
 from alerting.alert import send_telegram_alert
-from utils.logging_conf import logger
-from airflow.sdk import get_current_context
-from urllib.parse import unquote
 from datetime import datetime, timezone
+from etl.validate import AirQualityTransformedReading
+from utils.logging_conf import logger
 from utils.time_utils import now_wat
+import pandas as pd
+from etl.validate import AirQualityReading
+import io
 import json
-
-from utils.supabase_conf import create_s3_client
-
-
-def get_loaded_file_key_from_bucket():
-    context = get_current_context()
-    messages = context["ti"].xcom_pull(
-        task_ids="watch_data_staging",
-        key="messages"
-    )
-
-    message_body = json.loads(messages[0]["Body"])
-    message_key = unquote((message_body.get("Records")[0].get("s3").get("object").get("key")))
-
-    return message_key
 
 
 def get_data_from_bucket(key: str) -> dict:
@@ -33,21 +21,23 @@ def get_data_from_bucket(key: str) -> dict:
     try:
         response = s3_client.get_object(Bucket=bucket_name, Key=key)
         data = response["Body"].read().decode("utf-8")
-        return json.loads(data)
+
+        parsed_data = json.loads(data)
+        validated_data = AirQualityReading(**parsed_data) # Validate the data before returning
+        return validated_data.model_dump() # return dict instead of pydantic model val
     except Exception as e:
         logger.error(f"Failed to fetch data from bucket: {e}")
         send_telegram_alert(f"Failed to fetch data from bucket: {e}")
         raise
 
 
-def convert_date_from_unix_to_datetime():
+def convert_date_from_unix_to_datetime(key: str) -> dict:
     """
     Transformation layer — only responsibility is transforming the data.
     Has zero knowledge of HTTP, validation, or storage.
     Receives already-validated data as a plain dict and returns a transformed dict.
     """
 
-    key = get_loaded_file_key_from_bucket()
     data = get_data_from_bucket(key)
 
     date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc)
@@ -57,35 +47,57 @@ def convert_date_from_unix_to_datetime():
 
     return {
         "aqi": data["aqi"],
-        "date": date_value.strftime("%Y-%m-%d %H:%M:%S"),
+        "date_epoch": data["date"],
+        "date_utc": date_value,
         "co_value": data["co_value"],
         "ozone_value": data["ozone_value"]
     }
 
+def convert_to_parquet(key: str) -> bytes:
+    """
+    Example of a more complex transformation function that converts the data to Parquet format.
+    """
 
-def save_transformed_data_to_bucket():
+    try:
+        transformed_data = convert_date_from_unix_to_datetime(key)
+        AirQualityTransformedReading(**transformed_data)
+    except Exception as e:
+        logger.error(f"Data validation failed after transformation: {e}")
+        send_telegram_alert(f"Data validation failed after transformation: {e}")
+        raise
+
+    df = pd.DataFrame([transformed_data])
+
+    parquet_buffer = io.BytesIO()
+    df.to_parquet(parquet_buffer, index=False)
+
+    return parquet_buffer.getvalue()
+
+
+def save_transformed_data_to_bucket(key: str):
     """
     Orchestration layer — only responsibility is orchestrating the transformation
     and storage layers. Has zero knowledge of the inner workings of either layer.
     """
 
-    transformed_data = convert_date_from_unix_to_datetime()
+    # transformed_data = convert_date_from_unix_to_datetime()
+    transformed_data = convert_to_parquet(key)
 
     bucket_name = "aqi-transform"
     s3_client = create_s3_client()
     now = datetime.now(timezone.utc)
-    key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.json"
+    key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.parquet"
 
     try:
         s3_client.put_object(
             Bucket=bucket_name,
             Key=key,
-            Body=json.dumps(transformed_data),
+            Body=transformed_data,
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
-        logger.info(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
+        logger.info(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
         send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
-        send_telegram_alert(f"Data saved at {now_wat().strftime("%Y-%m-%d %H:%M:%S %Z")}")
+        send_telegram_alert(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     except Exception as e:
         logger.error(f"Failed to ingest data to {bucket_name}: {e}")
         send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")

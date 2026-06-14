@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, field_validator
 
 class AirqualityFetchError(Exception):
@@ -16,6 +17,26 @@ class AirQualityReading(BaseModel):
     """
     aqi: int
     date: int
+    co_value: float
+    ozone_value: float
+
+    @field_validator("aqi")
+    @classmethod
+    def aqi_must_be_in_range(cls, v):
+        if not 1 <= v <= 5:
+            raise ValueError(f"AQI value {v} is outside expected range 1-5")
+        return v
+
+
+class AirQualityTransformedReading(BaseModel):
+    """
+    Validation layer — only responsibility is validating the shape
+    and business rules of a single transformed air quality reading.
+    Has zero knowledge of HTTP, storage, or alerting.
+    """
+    aqi: int
+    date_epoch: int
+    date_utc: datetime
     co_value: float
     ozone_value: float
 

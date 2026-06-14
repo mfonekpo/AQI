@@ -12,7 +12,9 @@ def create_s3_client():
         secret_key = os.getenv("secret_access_key")
         region = os.getenv("region")
 
+
         session = boto3.session.Session()
+
         s3_client = session.client(
             service_name="s3",
             aws_access_key_id=access_key,
@@ -23,4 +25,25 @@ def create_s3_client():
         return s3_client
     except Exception as e:
         logger.error(f"Failed to create S3 client: {e}")
-        return None
+        raise
+
+
+def create_sqs_client():
+    try:
+        access_key = os.getenv("access_key")
+        secret_key = os.getenv("secret_access_key")
+        region = os.getenv("region")
+
+        session = boto3.session.Session()
+
+        sqs_client = session.client(
+            service_name="sqs",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region,
+        )
+        logger.info("SQS client created successfully")
+        return sqs_client
+    except Exception as e:
+        logger.error(f"Failed to create SQS client: {e}")
+        raise

@@ -34,7 +34,7 @@ def fetch_air_quality() -> dict:
     """
 
     validate_env()
-    
+
     payload = {
         "lat": LAT,
         "lon": LONG,
