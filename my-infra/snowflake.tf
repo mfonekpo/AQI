@@ -30,3 +30,14 @@ resource "snowflake_schema" "tf_aqi_schema" {
   task_auto_retry_attempts        = 4
   suspend_task_after_num_failures = 4
 }
+
+
+# --------------- storage integration --------------------
+resource "snowflake_storage_integration_aws" "tf_s3_integration" {
+  name                      = var.s3_storage_name
+  comment                   = "terraform provisioned storage integration for the aqi project"
+  enabled                   = true
+  storage_provider          = "S3"
+  storage_aws_role_arn      = aws_iam_role.snowflake_storage_role.arn
+  storage_allowed_locations = ["s3://${var.s3_buckets.transform.name}"]
+}
