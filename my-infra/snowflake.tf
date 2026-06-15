@@ -41,3 +41,12 @@ resource "snowflake_storage_integration_aws" "tf_s3_integration" {
   storage_aws_role_arn      = aws_iam_role.snowflake_storage_role.arn
   storage_allowed_locations = ["s3://${var.s3_buckets.transform.name}"]
 }
+
+
+# ----------------------- configure file format for snowflake --------------------
+resource "snowflake_file_format" "tf_snowflake_file_format" {
+  name = "file_format"
+  database = var.db_name
+  schema = var.schema_name
+  format_type = "parquet"
+}
