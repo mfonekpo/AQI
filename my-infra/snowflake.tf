@@ -31,7 +31,6 @@ resource "snowflake_schema" "tf_aqi_schema" {
   suspend_task_after_num_failures = 4
 }
 
-
 # --------------- storage integration --------------------
 resource "snowflake_storage_integration_aws" "tf_s3_integration" {
   name                      = var.s3_storage_name
@@ -42,11 +41,24 @@ resource "snowflake_storage_integration_aws" "tf_s3_integration" {
   storage_allowed_locations = ["s3://${var.s3_buckets.transform.name}"]
 }
 
-
 # ----------------------- configure file format for snowflake --------------------
 resource "snowflake_file_format" "tf_snowflake_file_format" {
-  name = "file_format"
-  database = var.db_name
-  schema = var.schema_name
+  name        = "file_format"
+  database    = var.db_name
+  schema      = var.schema_name
   format_type = "parquet"
+}
+
+# --------------------- configure snowflake stage --------------------
+resource "snowflake_stage_external_s3" "tf_snowflake_stage" {
+  name     = "snowflake_storage_stage"
+  comment = "terraform provisioned stage for the aqi project"
+  url      = "s3://${var.s3_buckets.transform.name}/transformed_data/"
+  database = var.db_name
+  schema   = var.schema_name
+  storage_integration = snowflake_storage_integration_aws.tf_s3_integration.name
+
+  directory {
+    enable = false
+  }
 }
