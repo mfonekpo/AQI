@@ -67,3 +67,21 @@ variable "db_name" {
   description = "Snowflake database name"
   type        = string
 }
+
+
+variable "s3_storage_name" {
+  description = "Snowflake external storage name for integration"
+  type        = string
+}
+
+variable "snowflake_iam_user_arn" {
+  description = "Snowflake IAM user ARN"
+  type        = string
+  sensitive   = true
+}
+
+variable "snowflake_external_id" {
+  description = "Snowflake external ID"
+  type        = string
+  sensitive   = true
+}
