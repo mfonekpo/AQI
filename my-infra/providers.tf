@@ -30,5 +30,8 @@ provider "snowflake" {
   role                     = var.snowflake_role
   authenticator            = "SNOWFLAKE_JWT"
   private_key              = file(local.private_key_path)
-  preview_features_enabled = ["snowflake_storage_integration_aws_resource"]
+  preview_features_enabled = [
+    "snowflake_storage_integration_aws_resource",
+    "snowflake_file_format_resource"
+  ]
 }
