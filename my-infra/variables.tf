@@ -85,3 +85,16 @@ variable "snowflake_external_id" {
   type        = string
   sensitive   = true
 }
+
+
+variable "table_name" {
+  description = "Snowflake table name"
+  type        = string
+  sensitive   = true
+}
+
+variable "warehouse_name" {
+  description = "Snowflake warehouse name"
+  type        = string
+  sensitive   = true
+}
