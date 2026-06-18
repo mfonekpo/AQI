@@ -6,9 +6,18 @@ import os
 from utils.aws_conf import create_sqs_client
 from dotenv import load_dotenv
 from dataclasses import dataclass
+from pydantic import ValidationError
+from etl.validate import SqsSensorMessage, S3EventBody
 
 
 load_dotenv()
+
+
+EXPECTED_BUCKET = "aqi-staging"
+EXPECTED_PREFIX = "raw_data/"
+EXPECTED_SUFFIX = ".json"
+S3_TEST_EVENT = "s3:TestEvent"
+OBJECT_CREATED_PREFIX = "ObjectCreated:"
 
 
 @dataclass
@@ -18,41 +27,61 @@ class ParsedS3Event:
     bucket: str
     key: str
     event_name: str
+    e_tag: str | None = None
+    version_id: str | None = None
 
 def parse_s3_event_message(message: dict) -> ParsedS3Event | None:
-    message_body = json.loads(message["Body"])
+    """
+    Validates and filters an SQS message containing an S3 event.
 
-    if message_body.get("Event") == "s3:TestEvent":
+    Returns ParsedS3Event for processable raw AQI objects, None for known
+    irrelevant events, and raises ValueError for malformed messages.
+    """
+    try:
+        sqs_message = SqsSensorMessage.model_validate(message)
+        message_body = json.loads(sqs_message.body)
+    except (ValidationError, json.JSONDecodeError) as e:
+        raise ValueError(f"Invalid SQS message shape: {e}") from e
+
+    if not isinstance(message_body, dict):
+        raise ValueError(f"SQS message Body must decode to a JSON object: {message_body}")
+
+    if message_body.get("Event") == S3_TEST_EVENT:
         logger.info("Skipping S3 test event")
         return None
-    records = message_body.get("Records", [])
 
-    if not records:
-        raise ValueError(f"Unexpected SQS message body: {message_body}")
+    try:
+        s3_event = S3EventBody.model_validate(message_body)
+    except ValidationError as e:
+        raise ValueError(f"Invalid S3 event body: {e}") from e
 
-    record = records[0]
-    event_name = record.get("eventName", "")
+    record = s3_event.records[0]
+    event_name = record.event_name
 
-    if not event_name.startswith("ObjectCreated:"):
+    if not event_name.startswith(OBJECT_CREATED_PREFIX):
         logger.info(f"Skipping non-ObjectCreated event: {event_name}")
         return None
-    
-    bucket = record["s3"]["bucket"]["name"]
-    key = unquote(record["s3"]["object"]["key"])
-    if bucket != "aqi-staging":
+
+    bucket = record.s3.bucket.name
+    s3_object = record.s3.s3_object
+    key = unquote(s3_object.key)
+
+    if bucket != EXPECTED_BUCKET:
         logger.info(f"Skipping event from unexpected bucket: {bucket}")
         return None
 
-    if not key.startswith("raw_data/") or not key.endswith(".json"):
-            logger.info(f"Skipping event for unsupported key: {key}")
-            return None
+    if not key.startswith(EXPECTED_PREFIX) or not key.endswith(EXPECTED_SUFFIX):
+        logger.info(f"Skipping event for unsupported key: {key}")
+        return None
 
     return ParsedS3Event(
-        message_id=message["MessageId"],
-        receipt_handle=message["ReceiptHandle"],
+        message_id=sqs_message.message_id,
+        receipt_handle=sqs_message.receipt_handle,
         bucket=bucket,
         key=key,
-        event_name=event_name
+        event_name=event_name,
+        e_tag=s3_object.e_tag,
+        version_id=s3_object.version_id
     )
 
 def validate_queue_url(queue_url: str | None) -> str:
