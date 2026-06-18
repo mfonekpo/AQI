@@ -96,8 +96,6 @@ def save_transformed_data_to_bucket(key: str):
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
         logger.info(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
-        send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
-        send_telegram_alert(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     except Exception as e:
         logger.error(f"Failed to ingest data to {bucket_name}: {e}")
         send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")
