@@ -18,7 +18,6 @@ def ingest_to_bucket():
     try:
         raw_data = fetch_air_quality()
         logger.info("Data fetched from weather API successfully")
-        send_telegram_alert("Data fetched from weather API successfully")
     except AirqualityFetchError as e:
         logger.error(f"Failed to fetch air quality data: {e}")
         send_telegram_alert(f"Failed to fetch air quality data: {e}")
@@ -26,7 +25,6 @@ def ingest_to_bucket():
     try:
         write_to_bucket(raw_data)
         logger.info("Data saved to staging bucket successfully")
-        send_telegram_alert("Data saved to staging bucket successfully")
     except Exception as e:
         logger.error(f"Failed to save data to staging bucket: {e}")
         send_telegram_alert(f"Failed to save data to staging bucket: {e}")

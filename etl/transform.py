@@ -40,7 +40,7 @@ def convert_date_from_unix_to_datetime(key: str) -> dict:
 
     data = get_data_from_bucket(key)
 
-    date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc)
+    date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc).isoformat()
 
     logger.info("Data transformation logic fired")
     send_telegram_alert("Data transformation logic fired")
@@ -96,8 +96,6 @@ def save_transformed_data_to_bucket(key: str):
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
         logger.info(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
-        send_telegram_alert(f"Data successfully ingested to {bucket_name}: {key}")
-        send_telegram_alert(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     except Exception as e:
         logger.error(f"Failed to ingest data to {bucket_name}: {e}")
         send_telegram_alert(f"Failed to ingest data to {bucket_name}: {e}")

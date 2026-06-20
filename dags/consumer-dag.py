@@ -1,6 +1,6 @@
-from airflow.sdk import dag, task, Context
+from airflow.sdk import dag, task, Context, get_current_context
 from alerting.alert import send_telegram_alert
-from etl.consume import receive_sqs_message, delete_message
+from etl.consume import parse_s3_event_message, delete_message
 from utils.logging_conf import logger
 import pendulum
 from etl.sensors import ingestion_sensor_decorator
@@ -20,12 +20,33 @@ def on_failure_callback(context: Context) -> None:
 
 @task()
 def process_sqs_message():
-    message = receive_sqs_message()
-    if not message:
+
+    context = get_current_context()
+
+    messages = context["ti"].xcom_pull(
+        task_ids="ingestion_SQS_sensor",
+        key="messages"
+    )
+
+    if not messages:
+        logger.warning("No messages in XCom")
+        send_telegram_alert("No messages in XCom for sensor log task")
+        return
+    message = messages[0]
+    parsed_event = parse_s3_event_message(message)
+
+    if parsed_event is None:
+        delete_message(message["ReceiptHandle"])
         return
     try:
-        save_transformed_data_to_bucket(message["s3_key"])
-        delete_message(message["receipt_handle"])
+        logger.info(f"Processing S3 object: {parsed_event.bucket}/{parsed_event.key}")
+
+        save_transformed_data_to_bucket(parsed_event.key)
+
+        delete_message(parsed_event.receipt_handle)
+
+        logger.info(f"Successfully processed message: {parsed_event.message_id}")
+
     except Exception as e:
         logger.error(f"Failed to process SQS message: {e}")
         send_telegram_alert(f"Failed to process SQS message: {e}")
