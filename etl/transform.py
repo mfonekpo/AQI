@@ -53,13 +53,13 @@ def convert_date_from_unix_to_datetime(key: str) -> dict:
         "ozone_value": data["ozone_value"]
     }
 
-def convert_to_parquet(key: str) -> bytes:
+def convert_to_parquet(transformed_data: dict) -> bytes:
     """
     Example of a more complex transformation function that converts the data to Parquet format.
     """
 
     try:
-        transformed_data = convert_date_from_unix_to_datetime(key)
+        # transformed_data = convert_date_from_unix_to_datetime(key)
         AirQualityTransformedReading(**transformed_data)
     except Exception as e:
         logger.error(f"Data validation failed after transformation: {e}")
@@ -80,19 +80,35 @@ def save_transformed_data_to_bucket(key: str):
     and storage layers. Has zero knowledge of the inner workings of either layer.
     """
 
-    # transformed_data = convert_date_from_unix_to_datetime()
-    transformed_data = convert_to_parquet(key)
+    transformed_record = convert_date_from_unix_to_datetime(key)
+
+    parquet_bytes = convert_to_parquet(transformed_record)
+
+    observation_time = (
+        datetime.fromtimestamp(
+            transformed_record["date_epoch"], tz=timezone.utc
+        )
+    )
 
     bucket_name = "aqi-transform"
     s3_client = create_s3_client()
-    now = datetime.now(timezone.utc)
-    key = f"transformed_data/year={now.year}/month={now.month:02d}/day={now.day:02d}/hour={now.hour:02d}/aqi.parquet"
+    observation_time = datetime.fromtimestamp(
+        transformed_record["date_epoch"], tz=timezone.utc
+    )
+    key = (
+        f"transformed_data/"
+        f"year={observation_time.year}/"
+        f"month={observation_time.month:02d}/"
+        f"day={observation_time.day:02d}/"
+        f"hour={observation_time.hour:02d}/"
+        f"aqi.parquet"
+    )
 
     try:
         s3_client.put_object(
             Bucket=bucket_name,
             Key=key,
-            Body=transformed_data,
+            Body=parquet_bytes,
         )
         logger.info(f"Data successfully ingested to {bucket_name}: {key}")
         logger.info(f"Data saved at {now_wat().strftime('%Y-%m-%d %H:%M:%S %Z')}")
