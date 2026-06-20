@@ -40,7 +40,7 @@ def convert_date_from_unix_to_datetime(key: str) -> dict:
 
     data = get_data_from_bucket(key)
 
-    date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc)
+    date_value = datetime.fromtimestamp(data["date"], tz=timezone.utc).isoformat()
 
     logger.info("Data transformation logic fired")
     send_telegram_alert("Data transformation logic fired")
