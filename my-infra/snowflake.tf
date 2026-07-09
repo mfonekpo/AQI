@@ -63,7 +63,7 @@ resource "snowflake_stage_external_s3" "tf_snowflake_stage" {
   }
 }
 
-# ---------- configure snowflake pipeline -----------
+# ---------- configure snowflake pipe -----------
 resource "snowflake_pipe" "tf_snowflake_pipe" {
   name        = "aqi_pipe"
   database    = var.db_name
