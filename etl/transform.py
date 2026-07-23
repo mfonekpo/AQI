@@ -1,3 +1,10 @@
+"""Transformation utilities for converting raw AQI records into Parquet output.
+
+The module reads validated records from the staging S3 bucket, reshapes them
+into the reporting-friendly schema, and persists the resulting artifact into
+an S3 transform bucket for downstream analytics use.
+"""
+
 from utils.aws_conf import create_s3_client
 from alerting.alert import send_telegram_alert
 from datetime import datetime, timezone
@@ -11,8 +18,17 @@ import json
 
 
 def get_data_from_bucket(key: str) -> dict:
-    """
-    Fetches a JSON object from the S3 bucket given its key.
+    """Read a raw AQI JSON object from the staging S3 bucket.
+
+    Args:
+        key: The S3 object key to retrieve from the staging bucket.
+
+    Returns:
+        A validated dictionary representation of the raw AQI record.
+
+    Raises:
+        Exception: If the object cannot be retrieved or the payload fails
+            validation.
     """
 
     bucket_name = "aqi-staging"
@@ -32,10 +48,14 @@ def get_data_from_bucket(key: str) -> dict:
 
 
 def convert_date_from_unix_to_datetime(key: str) -> dict:
-    """
-    Transformation layer — only responsibility is transforming the data.
-    Has zero knowledge of HTTP, validation, or storage.
-    Receives already-validated data as a plain dict and returns a transformed dict.
+    """Convert an S3 raw AQI record into the analytics-ready schema.
+
+    Args:
+        key: The S3 key of the raw AQI JSON object to transform.
+
+    Returns:
+        A dict containing the normalized AQI fields, including the epoch date,
+        the ISO-8601 UTC timestamp, and the sensor readings.
     """
 
     data = get_data_from_bucket(key)
@@ -54,8 +74,17 @@ def convert_date_from_unix_to_datetime(key: str) -> dict:
     }
 
 def convert_to_parquet(transformed_data: dict) -> bytes:
-    """
-    Example of a more complex transformation function that converts the data to Parquet format.
+    """Serialize a transformed AQI record into Parquet bytes.
+
+    Args:
+        transformed_data: A dictionary matching the transformed reading schema.
+
+    Returns:
+        The serialized Parquet payload as a byte string.
+
+    Raises:
+        Exception: If the transformed payload does not satisfy the domain
+            validation rules.
     """
 
     try:
@@ -75,9 +104,16 @@ def convert_to_parquet(transformed_data: dict) -> bytes:
 
 
 def save_transformed_data_to_bucket(key: str):
-    """
-    Orchestration layer — only responsibility is orchestrating the transformation
-    and storage layers. Has zero knowledge of the inner workings of either layer.
+    """Transform a raw AQI object and write the Parquet artifact to S3.
+
+    Args:
+        key: The raw object key stored in the staging bucket.
+
+    Returns:
+        None.
+
+    Raises:
+        Exception: If the transformation or S3 upload fails unexpectedly.
     """
 
     transformed_record = convert_date_from_unix_to_datetime(key)

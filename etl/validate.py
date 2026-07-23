@@ -1,19 +1,27 @@
+"""Pydantic validation models and shared domain errors for the AQI pipeline.
+
+The schemas in this module define the contract boundaries for raw AQI fetches,
+transformed analytics records, and the S3/SQS event envelope consumed by the
+consumer DAG.
+"""
+
 from datetime import datetime
 from pydantic import BaseModel, field_validator, Field, ConfigDict
 
 class AirqualityFetchError(Exception):
-    """
-    Raised when any part of the air quality pipeline fails.
-    Defined here so all layers can import it without circular imports.
+    """Raised when the AQI fetch or validation path fails unexpectedly.
+
+    This exception is intentionally shared across layers so the ingestion and
+    processing pipeline can report a single domain-level failure mode.
     """
     pass
 
 
 class AirQualityReading(BaseModel):
-    """
-    Validation layer — only responsibility is validating the shape
-    and business rules of a single air quality reading.
-    Has zero knowledge of HTTP, storage, or alerting.
+    """Validate the structure of a single raw AQI reading payload.
+
+    The model guarantees that the API response shape is normalized sufficiently
+    for downstream storage and transformation operations.
     """
     aqi: int
     date: int
@@ -29,10 +37,10 @@ class AirQualityReading(BaseModel):
 
 
 class AirQualityTransformedReading(BaseModel):
-    """
-    Validation layer — only responsibility is validating the shape
-    and business rules of a single transformed air quality reading.
-    Has zero knowledge of HTTP, storage, or alerting.
+    """Validate the schema of a transformed AQI analytics record.
+
+    This model ensures that the fully normalized record is suitable for Parquet
+    serialization and downstream warehouse ingestion.
     """
     aqi: int
     date_epoch: int
@@ -49,6 +57,11 @@ class AirQualityTransformedReading(BaseModel):
     
 
 class AwsEventModel(BaseModel):
+    """Base model for AWS event payloads with permissive alias handling.
+
+    The configuration ignores unknown fields and supports alias-based input
+    mapping for AWS event envelopes.
+    """
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
 

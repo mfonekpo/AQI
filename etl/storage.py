@@ -1,3 +1,9 @@
+"""Storage helpers for persisting raw AQI data into Amazon S3.
+
+The module owns the S3 object-key layout and the S3 write operation for raw
+payloads arriving from the producer ingestion flow.
+"""
+
 import json
 from datetime import datetime, timezone
 from utils.logging_conf import logger
@@ -6,9 +12,14 @@ from alerting.alert import send_telegram_alert
 
 
 def build_s3_key(now: datetime) -> str:
-    """
-    Pure function — builds the S3 key from a datetime.
-    Pure functions are the easiest things to test: no mocks needed.
+    """Build a deterministic S3 key for a raw AQI payload.
+
+    Args:
+        now: The UTC timestamp that should be encoded into the partition path.
+
+    Returns:
+        A path-like S3 key in the ``raw_data/year=.../month=.../day=.../hour=.../aqi.json``
+        format.
     """
     return(
         f"raw_data/"
@@ -20,10 +31,13 @@ def build_s3_key(now: datetime) -> str:
     )
 
 def write_to_bucket(data: dict) -> None:
-    """
-    Storage layer — only responsibility is writing data to S3.
-    Has zero knowledge of HTTP or validation.
-    Receives already-validated data as a plain dict.
+    """Persist an already-validated AQI payload to the staging S3 bucket.
+
+    Args:
+        data: A dictionary containing the validated AQI reading payload.
+
+    Raises:
+        Exception: If the S3 write operation cannot be completed.
     """
 
     bucket_name = "aqi-staging"

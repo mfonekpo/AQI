@@ -1,3 +1,9 @@
+"""Centralized logging configuration for the AQI pipeline.
+
+The logger is configured once at import time and writes both to stdout and to
+structured log files under the repository's ``logs`` directory.
+"""
+
 import logging
 import sys
 from pathlib import Path

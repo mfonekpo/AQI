@@ -1,3 +1,10 @@
+"""Consumer utilities for decoding AWS SQS/S3 notification events.
+
+This module parses SQS messages produced by S3 object-created notifications,
+filters out unsupported or test events, and exposes a small, typed domain
+object for later transformation work.
+"""
+
 import json
 from urllib.parse import unquote
 from utils.logging_conf import logger
@@ -22,6 +29,17 @@ OBJECT_CREATED_PREFIX = "ObjectCreated:"
 
 @dataclass
 class ParsedS3Event:
+    """Typed representation of a supported S3 object-created SQS notification.
+
+    Attributes:
+        message_id: The unique SQS message identifier.
+        receipt_handle: The handle used to delete the message after processing.
+        bucket: The originating S3 bucket name.
+        key: The fully decoded object key.
+        event_name: The AWS event name extracted from the S3 notification.
+        e_tag: Optional ETag metadata for the object.
+        version_id: Optional S3 version identifier.
+    """
     message_id: str
     receipt_handle: str
     bucket: str
@@ -31,11 +49,19 @@ class ParsedS3Event:
     version_id: str | None = None
 
 def parse_s3_event_message(message: dict) -> ParsedS3Event | None:
-    """
-    Validates and filters an SQS message containing an S3 event.
+    """Validate and normalize a raw SQS message into a processable S3 event.
 
-    Returns ParsedS3Event for processable raw AQI objects, None for known
-    irrelevant events, and raises ValueError for malformed messages.
+    Args:
+        message: A raw dictionary payload representing the SQS message.
+
+    Returns:
+        A ``ParsedS3Event`` instance when the message represents a supported
+        raw AQI object creation event; otherwise ``None`` for benign filtered
+        events such as S3 test notifications or unsupported bucket prefixes.
+
+    Raises:
+        ValueError: If the message shape is malformed or the embedded S3 event
+            envelope cannot be validated.
     """
     try:
         sqs_message = SqsSensorMessage.model_validate(message)
@@ -85,6 +111,17 @@ def parse_s3_event_message(message: dict) -> ParsedS3Event | None:
     )
 
 def validate_queue_url(queue_url: str | None) -> str:
+    """Validate that an SQS queue URL is configured for the current runtime.
+
+    Args:
+        queue_url: The queue URL from the environment or a caller-provided value.
+
+    Returns:
+        The validated queue URL string.
+
+    Raises:
+        ValueError: If no queue URL is configured.
+    """
     if not queue_url:
         error_msg = "STAGING_QUEUE_URL environment variable is not set."
         logger.error(error_msg)
@@ -93,8 +130,16 @@ def validate_queue_url(queue_url: str | None) -> str:
     return queue_url
 
 def delete_message(receipt_handle: str, queue_url: str | None = None) -> None:
-    """
-    Deletes a message from SQS using its receipt handle.
+    """Delete an SQS message using its receipt handle.
+
+    Args:
+        receipt_handle: The SQS message receipt handle that authorizes deletion.
+        queue_url: Optional queue URL override. When omitted, the function
+            resolves the value from the ``STAGING_QUEUE_URL`` environment
+            variable.
+
+    Raises:
+        Exception: If the SQS delete operation fails.
     """
     sqs_client = create_sqs_client()
     queue_url = queue_url or validate_queue_url(
