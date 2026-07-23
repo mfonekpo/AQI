@@ -1,3 +1,10 @@
+"""Fetch layer for the AQI ingestion pipeline.
+
+This module is responsible for retrieving one current air quality reading from
+OpenWeather and validating it against the domain model before it is forwarded
+for storage.
+"""
+
 import requests
 import json
 import os
@@ -16,6 +23,12 @@ LAT = os.getenv("LAT")
 LONG = os.getenv("LONG")
 
 def validate_env():
+    """Ensure that all required environment variables are present.
+
+    Raises:
+        EnvironmentError: If the OpenWeather credentials or coordinates are not
+            configured in the environment.
+    """
     if not all([WEATHERAPI, LAT, LONG]):
         raise EnvironmentError(
             "Missing required environment variables. Please check the .env file."
@@ -27,10 +40,18 @@ API_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def fetch_air_quality() -> dict:
-    """
-    Fetch layer — only responsibility is making the HTTP request
-    and returning a validated, serialised reading.
-    Has zero knowledge of storage or alerting.
+    """Fetch a validated AQI reading from the OpenWeather API.
+
+    The function performs environment validation, issues a single HTTP request,
+    parses the first response record, and ensures that the payload conforms to
+    the expected AQI reading schema before returning it.
+
+    Returns:
+        A dictionary representing a validated AQI reading payload.
+
+    Raises:
+        AirqualityFetchError: If the request fails, the response cannot be
+            decoded, or the payload fails schema validation.
     """
 
     validate_env()

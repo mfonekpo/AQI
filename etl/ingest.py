@@ -1,3 +1,9 @@
+"""Ingestion orchestration layer for the AQI producer pipeline.
+
+This module coordinates the fetch, validation, and object-storage steps that
+compose the raw AQI ingestion flow.
+"""
+
 from dotenv import load_dotenv
 from etl.fetch import fetch_air_quality
 from etl.storage import write_to_bucket
@@ -9,10 +15,19 @@ from alerting.alert import send_telegram_alert
 load_dotenv()
 
 def ingest_to_bucket():
-    """
-    Orchestration layer — only responsibility is orchestrating the fetch,
-    validate, and storage layers. Has zero knowledge of the inner workings
-    of any of those layers.
+    """Fetch a fresh AQI reading and persist it to the staging bucket.
+
+    The function performs the orchestration boundary between the external API
+    fetch layer and the S3 storage layer. Any fetch-side failure is logged and
+    surfaced through the alerting channel, while storage-side failures are
+    allowed to bubble up for the DAG to handle.
+
+    Returns:
+        None.
+
+    Raises:
+        Exception: If the storage operation fails unexpectedly after a
+            successful fetch.
     """
 
     try:

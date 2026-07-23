@@ -1,3 +1,11 @@
+"""Airflow consumer DAG for processing staged AQI S3 events from SQS.
+
+The consumer pipeline waits for raw S3 object creation notifications, reads
+ the queued message contents, transforms the referenced object into a
+Parquet-ready record, and removes the original SQS message after successful
+processing.
+"""
+
 from airflow.sdk import dag, task, Context, get_current_context
 from alerting.alert import send_telegram_alert
 from etl.consume import parse_s3_event_message, delete_message
@@ -8,6 +16,12 @@ from etl.transform import save_transformed_data_to_bucket
 
 
 def on_failure_callback(context: Context) -> None:
+    """Send an operational alert when the consumer DAG task fails.
+
+    Args:
+        context: Airflow task context containing DAG, task instance, and run
+            metadata used to build the failure message.
+    """
     dag_id  = context["dag"].dag_id
     task_id = context["task_instance"].task_id
     run_id  = context["run_id"]
@@ -20,6 +34,13 @@ def on_failure_callback(context: Context) -> None:
 
 @task()
 def process_sqs_message():
+    """Process the first queued S3 event message for the AQI pipeline.
+
+    The function retrieves the most recent sensor message through XCom, parses
+    the S3 event envelope, writes the transformed artifact to the transformed
+    object store, and deletes the corresponding SQS message if processing
+    succeeds.
+    """
 
     context = get_current_context()
 
@@ -68,6 +89,12 @@ def process_sqs_message():
 )
 
 def dag_run():
+    """Define the DAG graph for the consumer pipeline.
+
+    Returns:
+        None. The DAG structure is created by wiring the ingestion sensor to
+        the message-processing task.
+    """
 
     # define ingestion sensor task
     wait_for_data = ingestion_sensor_decorator()

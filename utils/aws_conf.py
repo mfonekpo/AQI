@@ -1,3 +1,9 @@
+"""Shared AWS client factories for S3 and SQS access.
+
+The module centralizes credential lookup and boto3 session creation so the
+rest of the pipeline can reuse a consistent configuration surface.
+"""
+
 from utils.logging_conf import logger
 import boto3
 import os
@@ -7,6 +13,12 @@ load_dotenv()
 
 
 def create_s3_client():
+    """Create a configured boto3 S3 client for the current environment.
+
+    Returns:
+        A boto3 S3 client instance that can be used to interact with the
+        configured bucket namespace.
+    """
     try:
         access_key = os.getenv("access_key")
         secret_key = os.getenv("secret_access_key")
@@ -29,6 +41,12 @@ def create_s3_client():
 
 
 def create_sqs_client():
+    """Create a configured boto3 SQS client for the current environment.
+
+    Returns:
+        A boto3 SQS client instance that can be used to interact with the
+        configured queue namespace.
+    """
     try:
         access_key = os.getenv("access_key")
         secret_key = os.getenv("secret_access_key")

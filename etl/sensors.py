@@ -1,9 +1,16 @@
+"""Reusable Airflow SQS sensor constructors for the AQI pipeline.
+
+These decorators expose the queue polling behavior used by the producer and
+consumer DAGs so the DAG graph remains declarative and easy to reason about.
+"""
+
 from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
 
 def ingestion_sensor_decorator():
-    """
-    Returns a configured SqsSensor.
-    Must be called at DAG level.
+    """Build the sensor used to wait for new raw AQI messages in SQS.
+
+    Returns:
+        A configured ``SqsSensor`` instance that watches the raw staging queue.
     """
     return SqsSensor(
         task_id="ingestion_SQS_sensor",
@@ -20,6 +27,11 @@ def ingestion_sensor_decorator():
     )
 
 def transformation_sensor_decorator():
+    """Build the sensor used to wait for transformed data queue activity.
+
+    Returns:
+        A configured ``SqsSensor`` instance bound to the transform queue.
+    """
     return SqsSensor(
         task_id = "transformation_SQS_sensor",
         sqs_queue="https://sqs.us-east-1.amazonaws.com/158449849022/aqi-transform-queue",

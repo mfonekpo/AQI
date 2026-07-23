@@ -1,3 +1,9 @@
+"""Helpers for logging S3 sensor notifications emitted by Airflow task XCom.
+
+These functions are intentionally lightweight and are used to trace when an
+SQS-backed sensor notices a new object event in the ingestion bucket.
+"""
+
 from alerting.alert import send_telegram_alert
 from utils.logging_conf import logger
 import json
@@ -6,9 +12,12 @@ from urllib.parse import unquote
 
 
 
-
 def log_file_detected(task_id: str):
-    """Call this AFTER sensor succeeds — reads key from SQS message via XCom."""
+    """Read an SQS sensor message from XCom and alert on the detected file key.
+
+    Args:
+        task_id: Airflow task identifier that produced the XCom message payload.
+    """
     context  = get_current_context()
     messages = context["ti"].xcom_pull(
         task_ids=task_id,
